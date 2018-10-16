@@ -17,6 +17,7 @@ import QuerySite from 'components/data/query-site';
 import { SEO } from './seo';
 import { GoogleAnalytics } from './google-analytics';
 import { Ads } from './ads';
+import Private from './private';
 import { SiteStats } from './site-stats';
 import { RelatedPosts } from './related-posts';
 import { VerificationServices } from './verification-services';
@@ -42,6 +43,7 @@ export class Traffic extends React.Component {
 			foundRelated = this.props.isModuleFound( 'related-posts' ),
 			foundVerification = this.props.isModuleFound( 'verification-tools' ),
 			foundSitemaps = this.props.isModuleFound( 'sitemaps' ),
+			foundPrivateSites = this.props.isModuleFound( 'private' ),
 			foundAnalytics = this.props.isModuleFound( 'google-analytics' );
 
 		if ( ! this.props.searchTerm && ! this.props.active ) {
@@ -55,7 +57,13 @@ export class Traffic extends React.Component {
 			! foundRelated &&
 			! foundVerification &&
 			! foundSitemaps &&
+<<<<<<< HEAD
 			! foundAnalytics
+=======
+			! foundAnalytics &&
+			! foundPrivateSites &&
+			! foundSearch
+>>>>>>> add private sites module
 		) {
 			return null;
 		}
@@ -63,6 +71,7 @@ export class Traffic extends React.Component {
 		return (
 			<div>
 				<QuerySite />
+<<<<<<< HEAD
 
 				<Card
 					title={ __(
@@ -109,6 +118,78 @@ export class Traffic extends React.Component {
 				{ foundStats && <SiteStats { ...commonProps } /> }
 				{ foundSitemaps && <Sitemaps { ...commonProps } /> }
 				{ foundVerification && <VerificationServices { ...commonProps } /> }
+=======
+				{
+					foundPrivateSites && (
+						<Private
+							{ ...commonProps }
+						/>
+					)
+				}
+				{
+					foundSearch && (
+						<Search
+							{ ...commonProps }
+						/>
+					)
+				}
+				{
+					foundAds && (
+						<Ads
+							{ ...commonProps }
+							configureUrl={ 'https://wordpress.com/ads/earnings/' + this.props.siteRawUrl }
+						/>
+					)
+				}
+				{
+					foundRelated && (
+						<RelatedPosts
+							{ ...commonProps }
+							configureUrl={ this.props.siteAdminUrl +
+						'customize.php?autofocus[section]=jetpack_relatedposts' +
+						'&return=' + encodeURIComponent( this.props.siteAdminUrl + 'admin.php?page=jetpack#/traffic' ) +
+						'&url=' + encodeURIComponent( this.props.lastPostUrl ) }
+						/>
+					)
+				}
+				{
+					foundSeo && (
+						<SEO
+							{ ...commonProps }
+							configureUrl={ 'https://wordpress.com/settings/traffic/' + this.props.siteRawUrl + '#seo' }
+						/>
+					)
+				}
+				{
+					foundAnalytics && (
+						<GoogleAnalytics
+							{ ...commonProps }
+							configureUrl={ 'https://wordpress.com/settings/traffic/' + this.props.siteRawUrl + '#analytics' }
+						/>
+					)
+				}
+				{
+					foundStats && (
+						<SiteStats
+							{ ...commonProps }
+						/>
+					)
+				}
+				{
+					foundSitemaps && (
+						<Sitemaps
+							{ ...commonProps }
+						/>
+					)
+				}
+				{
+					foundVerification && (
+						<VerificationServices
+							{ ...commonProps }
+						/>
+					)
+				}
+>>>>>>> add private sites module
 			</div>
 		);
 	}
