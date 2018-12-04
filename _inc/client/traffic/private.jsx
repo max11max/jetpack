@@ -12,7 +12,6 @@ import { ModuleSettingsForm as moduleSettingsForm } from 'components/module-sett
 import { ModuleToggle } from 'components/module-toggle';
 import SettingsCard from 'components/settings-card';
 import SettingsGroup from 'components/settings-group';
-import { FormFieldset } from 'components/forms';
 
 class Private extends React.Component {
 	render() {
@@ -42,14 +41,6 @@ class Private extends React.Component {
 					>
 						{ __( 'Make your site private' ) }
 					</ModuleToggle>
-
-					{ module_enabled && (
-						<FormFieldset>
-							<p className="jp-form-setting-explanation">
-								{ __( 'Your site is only visible to you and users you approve.' ) }
-							</p>
-						</FormFieldset>
-					) }
 				</SettingsGroup>
 			</SettingsCard>
 		);
