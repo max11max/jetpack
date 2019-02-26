@@ -21,25 +21,9 @@ class Jetpack_Modules_Registry {
 		return self::$instance;
 	}
 
-	// Loads all the necessery modules files
-	public function load() {
-		$active_modules = Jetpack_Options::get_option( 'active_modules' );
-		$this->set_modules_as_active( $active_modules );
-	}
-
-	public function set_modules_as_active( $active_modules ) {
-		foreach( $active_modules as $slug ) {
-			$this->modules[ $slug ]->is_active = true;
-		}
-	}
-
 	public function get_all() { // Jetpack::get_available_modules
 		// todo
 
-	}
-
-	public function get_default_modules() {
-		// todo
 	}
 
 	public function get( $slug ) {
@@ -50,31 +34,6 @@ class Jetpack_Modules_Registry {
 		$this->modules[ $slug ] = new Jetpack_Module( $slug, $args );
 	}
 
-	public function is_active( $slug ) {
-		$this->modules[$slug]->is_active;
-	}
-
-	public function get_all_active() {
-		$active_modules = array_filter( self::$modules, array( __CLASS__, 'filter_is_active' ) );
-		// filltering?
-		return $active_modules;
-	}
-
-	static function filter_is_active( $module ) {
-		return isset( $module->is_active ) && $module->is_active;
-	}
-
-	static function activate( $slug ) {
-		// todo
-	}
-
-	static function deactivate_all() {
-		// todo
-	}
-
-	static function deactivate( $slug ) {
-		// todo
-	}
 }
 
 
@@ -96,8 +55,6 @@ class Jetpack_Module {
 	public $feature;                    // Feature
 	public $additional_search_queries;  // Additional Search Queries
 	public $plan_classes;               // Plans
-	public $is_active;
-	public $is_avalable;
 
 	public function __construct( $module, $args = array() ) {
 		$this->slug = $module;
@@ -110,11 +67,5 @@ class Jetpack_Module {
 		foreach ( $args as $property_name => $property_value ) {
 			$this->$property_name = $property_value;
 		}
-
-	}
-	// check if module is available by checking that the file exits.
-	private function is_module_available( $module ) {
-		// todo
-		return true;
 	}
 }
