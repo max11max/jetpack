@@ -37,7 +37,10 @@ class Jetpack_Likes {
 		$this->in_jetpack = ( defined( 'IS_WPCOM' ) && IS_WPCOM ) ? false : true;
 		$this->settings = new Jetpack_Likes_Settings();
 
-		add_action( 'init', array( &$this, 'action_init' ) );
+		// We need to run on wp hook rather than init because we check is_amp_endpoint()
+		// when bootstrapping hooks
+		add_action( 'wp', array( &$this, 'action_init' ), 99 );
+
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 
 		if ( $this->in_jetpack ) {
@@ -46,6 +49,7 @@ class Jetpack_Likes {
 
 			Jetpack::enable_module_configurable( __FILE__ );
 			Jetpack::module_configuration_load( __FILE__, array( $this, 'configuration_redirect' ) );
+			add_filter( 'jetpack_module_configuration_url_likes', array( $this, 'jetpack_likes_configuration_url' ) );
 
 			add_action( 'admin_print_scripts-settings_page_sharing', array( &$this, 'load_jp_css' ) );
 			add_filter( 'sharing_show_buttons_on_row_start', array( $this, 'configuration_target_area' ) );
@@ -122,6 +126,16 @@ class Jetpack_Likes {
 	}
 
 	/**
+	 * Overrides default configuration url
+	 *
+	 * @uses admin_url
+	 * @return string module settings URL
+	 */
+	function jetpack_likes_configuration_url() {
+		return admin_url( 'options-general.php?page=sharing#likes' );
+	}
+
+	/**
 	 * Loads Jetpack's CSS on the sharing page so we can use .jetpack-targetable
 	 */
 	function load_jp_css() {
@@ -138,6 +152,20 @@ class Jetpack_Likes {
 			wp_enqueue_style( 'jetpack_likes', plugins_url( 'likes/style.css', __FILE__ ), array(), JETPACK__VERSION );
 			$this->register_scripts();
 		}
+	}
+
+
+	/**
+     * Stub for is_post_likeable, since some wpcom functions call this directly on the class
+	 * Are likes enabled for this post?
+     *
+     * @param int $post_id
+     * @return bool
+	 */
+	static function is_post_likeable( $post_id = 0 ) {
+		_deprecated_function( __METHOD__, 'jetpack-5.4', 'Jetpack_Likes_Settings()->is_post_likeable' );
+		$settings = new Jetpack_Likes_Settings();
+		return $settings->is_post_likeable();
 	}
 
 	/**
@@ -161,21 +189,6 @@ class Jetpack_Likes {
 	function configuration_target_area( $html = '' ) {
 		$html = "<tbody id='likes' class='jetpack-targetable'>" . $html;
 		return $html;
-	}
-
-	/**
-	 * WordPress.com: Metabox option for sharing (sharedaddy will handle this on the JP blog)
-	 */
-	function sharing_meta_box_content( $post ) {
-		$post_id = ! empty( $post->ID ) ? (int) $post->ID : get_the_ID();
-		$disabled = get_post_meta( $post_id, 'sharing_disabled', true ); ?>
-		<p>
-			<label for="wpl_enable_post_sharing">
-				<input type="checkbox" name="wpl_enable_post_sharing" id="wpl_enable_post_sharing" value="1" <?php checked( !$disabled ); ?>>
-				<?php _e( 'Show sharing buttons.', 'jetpack' ); ?>
-			</label>
-			<input type="hidden" name="wpl_sharing_status_hidden" value="1" />
-		</p> <?php
 	}
 
 	/**
@@ -256,6 +269,10 @@ class Jetpack_Likes {
 			 ( defined( 'REST_API_REQUEST' ) && REST_API_REQUEST ) ||
 			 ( defined( 'COOKIE_AUTH_REQUEST' ) && COOKIE_AUTH_REQUEST ) ||
 			 ( defined( 'JABBER_SERVER' ) && JABBER_SERVER ) ) {
+			return;
+		}
+
+		if ( Jetpack_AMP_Support::is_amp_request() ) {
 			return;
 		}
 
@@ -415,7 +432,7 @@ class Jetpack_Likes {
 		$date = $columns['date'];
 		unset( $columns['date'] );
 
-		$columns['likes'] = '<span class="vers"><img title="' . esc_attr__( 'Likes', 'jetpack' ) . '" alt="' . esc_attr__( 'Likes', 'jetpack' ) . '" src="//s0.wordpress.com/i/like-grey-icon.png" /></span>';
+		$columns['likes'] = '<span class="vers"><img title="' . esc_attr__( 'Likes', 'jetpack' ) . '" alt="' . esc_attr__( 'Likes', 'jetpack' ) . '" src="//s0.wordpress.com/i/like-grey-icon.png" /><span class="screen-reader-text">' . __( 'Likes', 'jetpack' ) . '</span></span>';
 		$columns['date'] = $date;
 
 		return $columns;
@@ -539,5 +556,25 @@ class Jetpack_Likes {
 		$wp_admin_bar->add_node( $node );
 	}
 }
+
+/**
+ * Add Likes post_meta to the REST API Post response.
+ *
+ * @action rest_api_init
+ * @uses register_meta
+ */
+function jetpack_post_likes_register_meta() {
+	register_meta(
+		'post', 'switch_like_status',
+		array(
+			'type'			=> 'boolean',
+			'single'		=> true,
+			'show_in_rest'	=> true,
+		)
+	);
+}
+
+// Add Likes post_meta to the REST API Post response.
+add_action( 'rest_api_init', 'jetpack_post_likes_register_meta' );
 
 Jetpack_Likes::init();

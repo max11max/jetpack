@@ -44,16 +44,22 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		add_filter( 'jetpack_sync_options_whitelist', array( $this, 'add_woocommerce_options_whitelist' ), 10 );
 		add_filter( 'jetpack_sync_constants_whitelist', array( $this, 'add_woocommerce_constants_whitelist' ), 10 );
 		add_filter( 'jetpack_sync_post_meta_whitelist', array( $this, 'add_woocommerce_post_meta_whitelist' ), 10 );
+		add_filter( 'jetpack_sync_comment_meta_whitelist', array( $this, 'add_woocommerce_comment_meta_whitelist' ), 10 );
 
 		add_filter( 'jetpack_sync_before_enqueue_woocommerce_new_order_item', array( $this, 'filter_order_item' ) );
 		add_filter( 'jetpack_sync_before_enqueue_woocommerce_update_order_item', array( $this, 'filter_order_item' ) );
 	}
 
 	function name() {
-		return "woocommerce";
+		return 'woocommerce';
 	}
 
 	public function init_listeners( $callable ) {
+		// attributes
+		add_action( 'woocommerce_attribute_added', $callable, 10, 2 );
+		add_action( 'woocommerce_attribute_updated', $callable, 10, 3 );
+		add_action( 'woocommerce_attribute_deleted', $callable, 10, 3 );
+
 		// orders
 		add_action( 'woocommerce_new_order', $callable, 10, 1 );
 		add_action( 'woocommerce_order_status_changed', $callable, 10, 3 );
@@ -62,9 +68,28 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		// order items
 		add_action( 'woocommerce_new_order_item', $callable, 10, 4 );
 		add_action( 'woocommerce_update_order_item', $callable, 10, 4 );
-
-		// order item meta
+		add_action( 'woocommerce_delete_order_item', $callable, 10, 1 );
 		$this->init_listeners_for_meta_type( 'order_item', $callable );
+
+		// payment tokens
+		add_action( 'woocommerce_new_payment_token', $callable, 10, 1 );
+		add_action( 'woocommerce_payment_token_deleted', $callable, 10, 2 );
+		add_action( 'woocommerce_payment_token_updated', $callable, 10, 1 );
+		$this->init_listeners_for_meta_type( 'payment_token', $callable );
+
+		// product downloads
+		add_action( 'woocommerce_downloadable_product_download_log_insert', $callable, 10, 1 );
+		add_action( 'woocommerce_grant_product_download_access', $callable, 10, 1 );
+
+		// tax rates
+		add_action( 'woocommerce_tax_rate_added', $callable, 10, 2 );
+		add_action( 'woocommerce_tax_rate_updated', $callable, 10, 2 );
+		add_action( 'woocommerce_tax_rate_deleted', $callable, 10, 1 );
+
+		// webhooks
+		add_action( 'woocommerce_new_webhook', $callable, 10, 1 );
+		add_action( 'woocommerce_webhook_deleted', $callable, 10, 2 );
+		add_action( 'woocommerce_webhook_updated', $callable, 10, 1 );
 	}
 
 	public function init_full_sync_listeners( $callable ) {
@@ -139,6 +164,10 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		return array_merge( $list, self::$wc_post_meta_whitelist );
 	}
 
+	public function add_woocommerce_comment_meta_whitelist( $list ) {
+		return array_merge( $list, self::$wc_comment_meta_whitelist );
+	}
+
 	private static $wc_options_whitelist = array(
 		'woocommerce_currency',
 		'woocommerce_db_version',
@@ -177,7 +206,7 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 	);
 
 	private static $wc_constants_whitelist = array(
-		//woocommerce options
+		// woocommerce options
 		'WC_PLUGIN_FILE',
 		'WC_ABSPATH',
 		'WC_PLUGIN_BASENAME',
@@ -193,7 +222,7 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 	);
 
 	private static $wc_post_meta_whitelist = array(
-		//woocommerce products
+		// woocommerce products
 		// https://github.com/woocommerce/woocommerce/blob/8ed6e7436ff87c2153ed30edd83c1ab8abbdd3e9/includes/data-stores/class-wc-product-data-store-cpt.php#L21
 		'_visibility',
 		'_sku',
@@ -233,27 +262,26 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		'_product_version',
 		'_wp_old_slug',
 
-		//woocommerce orders
+		// woocommerce orders
 		// https://github.com/woocommerce/woocommerce/blob/8ed6e7436ff87c2153ed30edd83c1ab8abbdd3e9/includes/data-stores/class-wc-order-data-store-cpt.php#L27
-		'_customer_user',
 		'_order_key',
 		'_order_currency',
-		'_billing_first_name',
-		'_billing_last_name',
-		'_billing_company',
-		'_billing_address_1',
-		'_billing_address_2',
+		// '_billing_first_name', do not sync these as they contain personal data
+		// '_billing_last_name',
+		// '_billing_company',
+		// '_billing_address_1',
+		// '_billing_address_2',
 		'_billing_city',
 		'_billing_state',
 		'_billing_postcode',
 		'_billing_country',
-		'_billing_email',
-		'_billing_phone',
-		'_shipping_first_name',
-		'_shipping_last_name',
-		'_shipping_company',
-		'_shipping_address_1',
-		'_shipping_address_2',
+		// '_billing_email', do not sync these as they contain personal data
+		// '_billing_phone',
+		// '_shipping_first_name',
+		// '_shipping_last_name',
+		// '_shipping_company',
+		// '_shipping_address_1',
+		// '_shipping_address_2',
 		'_shipping_city',
 		'_shipping_state',
 		'_shipping_postcode',
@@ -268,9 +296,9 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		'_order_total',
 		'_payment_method',
 		'_payment_method_title',
-		'_transaction_id',
-		'_customer_ip_address',
-		'_customer_user_agent',
+		// '_transaction_id', do not sync these as they contain personal data
+		// '_customer_ip_address',
+		// '_customer_user_agent',
 		'_created_via',
 		'_order_version',
 		'_prices_include_tax',
@@ -286,7 +314,7 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		// https://github.com/woocommerce/woocommerce/blob/8ed6e7436ff87c2153ed30edd83c1ab8abbdd3e9/includes/data-stores/class-wc-order-data-store-cpt.php#L594
 		'_order_stock_reduced',
 
-		//woocommerce order refunds
+		// woocommerce order refunds
 		// https://github.com/woocommerce/woocommerce/blob/b8a2815ae546c836467008739e7ff5150cb08e93/includes/data-stores/class-wc-order-refund-data-store-cpt.php#L20
 		'_order_currency',
 		'_refund_amount',
@@ -299,5 +327,9 @@ class Jetpack_Sync_Module_WooCommerce extends Jetpack_Sync_Module {
 		'_order_version',
 		'_prices_include_tax',
 		'_payment_tokens',
+	);
+
+	private static $wc_comment_meta_whitelist = array(
+		'rating',
 	);
 }

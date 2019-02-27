@@ -47,7 +47,7 @@ class Jetpack_Autoupdate {
 		if ( Jetpack_Options::get_option( 'autoupdate_translations', false ) ) {
 			return true;
 		}
-		
+
 		// Themes
 		$autoupdate_themes_translations = Jetpack_Options::get_option( 'autoupdate_themes_translations', array() );
 		$autoupdate_theme_list          = Jetpack_Options::get_option( 'autoupdate_themes', array() );
@@ -67,7 +67,7 @@ class Jetpack_Autoupdate {
 		       || in_array( $item->slug, $autoupdate_theme_list ) )
 		     && 'theme' === $item->type
 		) {
-			$this->expect( $item->type + ':' + $item->slug, 'translation' );
+			$this->expect( $item->type . ':' . $item->slug, 'translation' );
 
 			return true;
 		}
@@ -81,7 +81,7 @@ class Jetpack_Autoupdate {
 		if ( in_array( $item->slug, $plugin_slugs )
 		     && 'plugin' === $item->type
 		) {
-			$this->expect( $item->type + ':' + $item->slug, 'translation' );
+			$this->expect( $item->type . ':' . $item->slug, 'translation' );
 			return true;
 		}
 
@@ -223,7 +223,7 @@ class Jetpack_Autoupdate {
 						$successful_updates[] = $result->item->theme;
 						break;
 					case 'translation':
-						$successful_updates[] = $result->item->type + ':' + $result->item->slug;
+						$successful_updates[] = $result->item->type . ':' . $result->item->slug;
 						break;
 				}
 			}

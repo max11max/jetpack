@@ -73,6 +73,7 @@ class Jetpack_Admin {
 		$active_modules    = Jetpack::get_active_modules();
 		$modules           = array();
 		$jetpack_active = Jetpack::is_active() || Jetpack::is_development_mode();
+		$overrides = Jetpack_Modules_Overrides::instance();
 		foreach ( $available_modules as $module ) {
 			if ( $module_array = Jetpack::get_module( $module ) ) {
 				/**
@@ -100,6 +101,7 @@ class Jetpack_Admin {
 				$module_array['available']         = self::is_module_available( $module_array );
 				$module_array['short_description'] = $short_desc_trunc;
 				$module_array['configure_url']     = Jetpack::module_configuration_url( $module );
+				$module_array['override']          = $overrides->get_module_override( $module );
 
 				ob_start();
 				/**
@@ -163,7 +165,7 @@ class Jetpack_Admin {
 					 */
 					apply_filters( 'jetpack_module_configurable_' . $module, false )
 				) {
-					$module_array['configurable'] = sprintf( '<a href="%1$s">%2$s</a>', esc_url( Jetpack::module_configuration_url( $module ) ), __( 'Configure', 'jetpack' ) );
+					$module_array['configurable'] = sprintf( '<a href="%1$s">%2$s</a>', esc_url( $module_array['configure_url'] ), __( 'Configure', 'jetpack' ) );
 				}
 
 				$modules[ $module ] = $module_array;
@@ -197,8 +199,7 @@ class Jetpack_Admin {
 				return false;
 			}
 
-			$plan = Jetpack::get_active_plan();
-			return in_array( $module['module'], $plan['supports'] );
+			return Jetpack::active_plan_supports( $module['module'] );
 		}
 	}
 
@@ -250,16 +251,29 @@ class Jetpack_Admin {
 	}
 
 	function admin_menu_debugger() {
+		jetpack_require_lib( 'debugger' );
 		Jetpack_Debugger::disconnect_and_redirect();
-		$debugger_hook = add_submenu_page( null, __( 'Jetpack Debugging Center', 'jetpack' ), '', 'manage_options', 'jetpack-debugger', array( $this, 'debugger_page' ) );
+		$debugger_hook = add_submenu_page(
+			null,
+			__( 'Debugging Center', 'jetpack' ),
+			'',
+			'manage_options',
+			'jetpack-debugger',
+			array( $this, 'wrap_debugger_page' )
+		);
 		add_action( "admin_head-$debugger_hook", array( 'Jetpack_Debugger', 'jetpack_debug_admin_head' ) );
 	}
 
-	function debugger_page() {
+	function wrap_debugger_page( ) {
 		nocache_headers();
 		if ( ! current_user_can( 'manage_options' ) ) {
 			die( '-1' );
 		}
+		Jetpack_Admin_Page::wrap_ui( array( $this, 'debugger_page' ) );
+	}
+
+	function debugger_page() {
+		jetpack_require_lib( 'debugger' );
 		Jetpack_Debugger::jetpack_debug_display_handler();
 	}
 }

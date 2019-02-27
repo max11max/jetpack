@@ -27,7 +27,6 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 	}
 
 	function test_white_listed_function_is_synced() {
-
 		$this->callable_module->set_callable_whitelist( array( 'jetpack_foo' => 'jetpack_foo_is_callable' ) );
 
 		$this->sender->do_sync();
@@ -53,6 +52,10 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 	public function test_sync_callable_whitelist() {
 		// $this->setSyncClientDefaults();
 
+		add_filter( 'jetpack_set_available_extensions',  array( $this, 'add_test_block' ) );
+		Jetpack_Gutenberg::init();
+		jetpack_register_block( 'jetpack/test' );
+
 		$callables = array(
 			'wp_max_upload_size'               => wp_max_upload_size(),
 			'is_main_network'                  => Jetpack::is_multi_network(),
@@ -76,13 +79,17 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 			'sso_bypass_default_login_form'    => Jetpack_SSO_Helpers::bypass_login_forward_wpcom(),
 			'wp_version'                       => Jetpack_Sync_Functions::wp_version(),
 			'get_plugins'                      => Jetpack_Sync_Functions::get_plugins(),
-			'get_plugins_action_links'		   => Jetpack_Sync_functions::get_plugins_action_links(),
+			'get_plugins_action_links'         => Jetpack_Sync_functions::get_plugins_action_links(),
 			'active_modules'                   => Jetpack::get_active_modules(),
 			'hosting_provider'                 => Jetpack_Sync_Functions::get_hosting_provider(),
 			'locale'                           => get_locale(),
 			'site_icon_url'                    => Jetpack_Sync_Functions::site_icon_url(),
 			'shortcodes'                       => Jetpack_Sync_Functions::get_shortcodes(),
 			'roles'                            => Jetpack_Sync_Functions::roles(),
+			'timezone'                         => Jetpack_Sync_Functions::get_timezone(),
+			'available_jetpack_blocks'         => Jetpack_Gutenberg::get_availability(),
+			'paused_themes'                    => Jetpack_Sync_Functions::get_paused_themes(),
+			'paused_plugins'                   => Jetpack_Sync_Functions::get_paused_plugins(),
 		);
 
 		if ( function_exists( 'wp_cache_is_enabled' ) ) {
@@ -121,6 +128,12 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 		$unique_whitelist = array_unique( $whitelist_keys );
 		$this->assertEquals( count( $unique_whitelist ), count( $whitelist_keys ), 'The duplicate keys are: ' . print_r( array_diff_key( $whitelist_keys, array_unique( $whitelist_keys ) ), 1 ) );
 
+		remove_filter( 'jetpack_set_available_extensions',  array( $this, 'add_test_block' ) );
+		Jetpack_Gutenberg::reset();
+	}
+
+	public function add_test_block() {
+		return array( 'test' );
 	}
 
 	function assertCallableIsSynced( $name, $value ) {
@@ -711,7 +724,10 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 	}
 
 	function test_plugin_action_links_get_synced() {
+		// Makes sure that we start fresh
+		delete_transient( 'jetpack_plugin_api_action_links_refresh' );
 		$helper_all = new Jetpack_Sync_Test_Helper();
+
 		$helper_all->array_override = array( '<a href="fun.php">fun</a>' );
 		add_filter( 'plugin_action_links', array( $helper_all, 'filter_override_array' ), 10 );
 
@@ -719,10 +735,10 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 		$helper_jetpack->array_override = array( '<a href="settings.php">settings</a>', '<a href="https://jetpack.com/support">support</a>' );
 		add_filter( 'plugin_action_links_jetpack/jetpack.php', array( $helper_jetpack, 'filter_override_array' ), 10 );
 
-		$callables_module = new Jetpack_Sync_Module_Callables(); // Do the admin init here so that we calculate the plugin links
-		$callables_module->set_plugin_action_links();
+		set_current_screen( 'banana' );
 		// Let's see if the original values get synced
 		$this->sender->do_sync();
+
 		$plugins_action_links = $this->server_replica_storage->get_callable( 'get_plugins_action_links' );
 
 		$expected_array = array(
@@ -734,26 +750,49 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 				'support' => 'https://jetpack.com/support'
 			)
 		);
-  		$this->assertEquals( $expected_array, $plugins_action_links );
+
+		$this->assertEquals( $expected_array, $this->extract_plugins_we_are_testing( $plugins_action_links )  );
 
 		$helper_all->array_override = array( '<a href="not-fun.php">not fun</a>' );
+
 		$this->resetCallableAndConstantTimeouts();
-		$callables_module->set_plugin_action_links();
+
+		set_current_screen( 'banana' );
 		$this->sender->do_sync();
 
 		$plugins_action_links = $this->server_replica_storage->get_callable( 'get_plugins_action_links' );
+
 		// Nothing should have changed since we cache the results.
-		$this->assertEquals( $plugins_action_links, $expected_array );
+		$this->assertEquals( $this->extract_plugins_we_are_testing( $plugins_action_links ), $expected_array );
 
-		activate_plugin('hello.php', '', false, true );
+		if ( file_exists( WP_CONTENT_DIR . '/plugins/hello.php' )  ) {
+			activate_plugin('hello.php', '', false, true );
+		}
+		if ( file_exists( WP_CONTENT_DIR . '/plugins/hello-dolly/hello.php' ) ) {
+			activate_plugin('hello-dolly/hello.php', '', false, true );
+		}
+
 		$this->resetCallableAndConstantTimeouts();
-		$callables_module->set_plugin_action_links();
+		set_current_screen( 'banana' );
 		$this->sender->do_sync();
 
 		$plugins_action_links = $this->server_replica_storage->get_callable( 'get_plugins_action_links' );
+
 		// Links should have changes now since we activated the plugin.
 		$expected_array['hello.php'] = array( 'not fun' => admin_url( 'not-fun.php' ) );
-		$this->assertEquals( $plugins_action_links, $expected_array );
+		$this->assertEquals( $this->extract_plugins_we_are_testing( $plugins_action_links ), $expected_array, 'Array was not updated to the new value as expected' );
+	}
+
+	function extract_plugins_we_are_testing( $plugins_action_links ) {
+		$only_plugins_we_care_about = array();
+		if ( isset( $plugins_action_links['hello.php'] ) ) {
+			$only_plugins_we_care_about['hello.php'] = isset( $plugins_action_links['hello.php'] ) ? $plugins_action_links['hello.php'] : '';
+		} else {
+			$only_plugins_we_care_about['hello.php'] = isset( $plugins_action_links['hello-dolly/hello.php'] ) ? $plugins_action_links['hello-dolly/hello.php'] : '';
+		}
+
+		$only_plugins_we_care_about['jetpack/jetpack.php'] = isset( $plugins_action_links['jetpack/jetpack.php'] ) ? $plugins_action_links['jetpack/jetpack.php'] : '';
+		return $only_plugins_we_care_about;
 	}
 
 	function cause_fatal_error( $actions ) {
@@ -766,14 +805,15 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 
 		delete_transient( 'jetpack_plugin_api_action_links_refresh' );
 		add_filter( 'plugin_action_links', array( $this, 'cause_fatal_error' ) );
-		$callables_module = new Jetpack_Sync_Module_Callables(); // Do the admin init here so that we calculate the plugin links
-		$callables_module->set_plugin_action_links();
+
+		set_current_screen( 'plugins' );
 
 		$this->resetCallableAndConstantTimeouts();
-		$callables_module->set_plugin_action_links();
+		set_current_screen( 'plugins' );
 		$this->sender->do_sync();
 		$plugins_action_links = $this->server_replica_storage->get_callable( 'get_plugins_action_links' );
-		$this->assertTrue( isset( $plugins_action_links['hello.php']['world'] ) );
+		$plugins_action_links = $this->extract_plugins_we_are_testing( $plugins_action_links );
+		$this->assertTrue( isset( $plugins_action_links['hello.php']['world'] ), 'World is not set' );
 	}
 
 	function __return_filtered_url() {
@@ -933,6 +973,51 @@ class WP_Test_Jetpack_Sync_Functions extends WP_Test_Jetpack_Sync_Base {
 		);
 	}
 
+	function test_get_timezone_from_timezone_string() {
+		update_option( 'timezone_string', 'America/Rankin_Inlet' );
+		update_option( 'gmt_offset', '' );
+		$this->assertEquals( 'America/Rankin Inlet', Jetpack_Sync_Functions::get_timezone() );
+	}
+
+	function test_get_timezone_from_gmt_offset_zero() {
+		update_option( 'timezone_string', '' );
+		update_option( 'gmt_offset', '0' );
+		$this->assertEquals( 'UTC+0', Jetpack_Sync_Functions::get_timezone() );
+	}
+
+	function test_get_timezone_from_gmt_offset_plus() {
+		update_option( 'timezone_string', '' );
+		update_option( 'gmt_offset', '1' );
+		$this->assertEquals( 'UTC+1', Jetpack_Sync_Functions::get_timezone() );
+	}
+
+	function test_get_timezone_from_gmt_offset_fractions() {
+		update_option( 'timezone_string', '' );
+		update_option( 'gmt_offset', '5.5' );
+		$this->assertEquals( 'UTC+5:30', Jetpack_Sync_Functions::get_timezone() );
+	}
+
+	function test_get_timezone_from_gmt_offset_minus() {
+		update_option( 'timezone_string', '' );
+		update_option( 'gmt_offset', '-1' );
+		$this->assertEquals( 'UTC-1', Jetpack_Sync_Functions::get_timezone() );
+	}
+
+	public function test_sync_callable_recursive_gets_checksum() {
+
+		$this->callable_module->set_callable_whitelist( array( 'jetpack_banana' => 'jetpack_recursive_banana' ) );
+		$this->sender->do_sync();
+		$synced_value = $this->server_replica_storage->get_callable( 'jetpack_banana' );
+		$this->assertTrue( ! empty( $synced_value ), 'We couldn\'t synced a value!' );
+	}
+
+}
+
+function jetpack_recursive_banana() {
+	$banana = new StdClass;
+	$banana->arr = array();
+	$banana->arr[] = $banana;
+	return $banana;
 }
 
 function jetpack_foo_is_callable_random() {

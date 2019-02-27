@@ -26,7 +26,7 @@ export const data = ( state = {}, action ) => {
 		case JETPACK_SITE_DATA_FETCH_RECEIVE:
 			return assign( {}, state, action.siteData );
 		case JETPACK_SITE_FEATURES_FETCH_RECEIVE:
-			return merge( {}, state, { siteFeatures: action.siteFeatures } );
+			return merge( {}, state, { site: { features: action.siteFeatures } } );
 		case JETPACK_SITE_PLANS_FETCH_RECEIVE:
 			return merge( {}, state, { sitePlans: action.plans } );
 		default:
@@ -35,37 +35,37 @@ export const data = ( state = {}, action ) => {
 };
 
 export const initialRequestsState = {
-	isFetchingSiteData: false
+	isFetchingSiteData: false,
 };
 
 export const requests = ( state = initialRequestsState, action ) => {
 	switch ( action.type ) {
 		case JETPACK_SITE_DATA_FETCH:
 			return assign( {}, state, {
-				isFetchingSiteData: true
+				isFetchingSiteData: true,
 			} );
 		case JETPACK_SITE_FEATURES_FETCH:
 			return assign( {}, state, {
-				isFetchingSiteFeatures: true
+				isFetchingSiteFeatures: true,
 			} );
 		case JETPACK_SITE_PLANS_FETCH:
 			return assign( {}, state, {
-				isFetchingSitePlans: true
+				isFetchingSitePlans: true,
 			} );
 		case JETPACK_SITE_DATA_FETCH_FAIL:
 		case JETPACK_SITE_DATA_FETCH_RECEIVE:
 			return assign( {}, state, {
-				isFetchingSiteData: false
+				isFetchingSiteData: false,
 			} );
 		case JETPACK_SITE_FEATURES_FETCH_FAIL:
 		case JETPACK_SITE_FEATURES_FETCH_RECEIVE:
 			return assign( {}, state, {
-				isFetchingSiteFeatures: false
+				isFetchingSiteFeatures: false,
 			} );
 		case JETPACK_SITE_PLANS_FETCH_FAIL:
 		case JETPACK_SITE_PLANS_FETCH_RECEIVE:
 			return assign( {}, state, {
-				isFetchingSitePlans: false
+				isFetchingSitePlans: false,
 			} );
 
 		default:
@@ -75,7 +75,7 @@ export const requests = ( state = initialRequestsState, action ) => {
 
 export const reducer = combineReducers( {
 	data,
-	requests
+	requests,
 } );
 
 /**
@@ -108,7 +108,7 @@ export function getSitePlan( state ) {
  * @return {Object}  Features
  */
 export function getAvailableFeatures( state ) {
-	return get( state.jetpack.siteData, [ 'data', 'siteFeatures', 'available' ], {} );
+	return get( state.jetpack.siteData, [ 'data', 'site', 'features', 'available' ], {} );
 }
 
 /**
@@ -117,9 +117,13 @@ export function getAvailableFeatures( state ) {
  * @return {Object}  Features
  */
 export function getActiveFeatures( state ) {
-	return get( state.jetpack.siteData, [ 'data', 'siteFeatures', 'active' ], {} );
+	return get( state.jetpack.siteData, [ 'data', 'site', 'features', 'active' ], [] );
 }
 
 export function getAvailablePlans( state ) {
 	return get( state.jetpack.siteData, [ 'data', 'sitePlans' ] );
+}
+
+export function getSiteID( state ) {
+	return get( state.jetpack.siteData, [ 'data', 'ID' ] );
 }
