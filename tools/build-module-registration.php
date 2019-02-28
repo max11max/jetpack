@@ -66,7 +66,6 @@ foreach ( $files as $file ) {
 				// Convert to translated string array.
 				case 'module_tags':
 				case 'feature':
-				case 'additional_search_queries':
 					$module_tags = array_map( 'trim', explode( ',', $string ) );
 					$_tags = null;
 					foreach ( $module_tags as $tag ) {
@@ -97,11 +96,12 @@ foreach ( $files as $file ) {
 					break;
 				// Convert to boolean from Yes and No.
 				case 'requires_connection':
-				case 'auto_activate':
 					$boolean = $string === 'Yes' ? 'true': 'false';
 					$_module_arguments .= "\t\t'{$field}' => {$boolean},\n";
 					break;
 				// Convert to string.
+				case 'additional_search_queries':
+				case 'auto_activate':
 				case 'introduced':
 				case 'changed':
 					$_module_arguments .= "\t\t'{$field}' => '{$string}',\n";
