@@ -169,8 +169,8 @@ class Jetpack_Sitemap_Manager {
 				)
 			);
 		}
-		
-		echo $the_content ;
+
+		echo $the_content;
 
 		die();
 	}
