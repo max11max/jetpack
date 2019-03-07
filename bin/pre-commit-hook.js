@@ -27,11 +27,7 @@ function parseGitDiffToPathArray( command ) {
  */
 function phpcsFilesToFilter( file ) {
 	// If the file path starts with anything like in the array below, it should be linted.
-	const whitelist = [
-		'_inc/lib/debugger/',
-		'extensions/',
-		'class.jetpack-gutenberg.php',
-	];
+	const whitelist = [ '_inc/lib/debugger/', 'extensions/', 'class.jetpack-gutenberg.php' ];
 
 	if ( -1 !== whitelist.findIndex( filePath => file.startsWith( filePath ) ) ) {
 		return true;
@@ -47,18 +43,19 @@ function phpcsFilesToFilter( file ) {
  * @return {boolean}        If the file matches the whitelist.
  */
 function jsFilesToFilter( file ) {
-	if (
-		file.startsWith( '_inc/client/' ) &&
-		/\.jsx?$/.test( file )
-	) {
+	if ( file.startsWith( '_inc/client/' ) && /\.jsx?$/.test( file ) ) {
 		return true;
 	}
 
 	return false;
 }
 
-const gitFiles = parseGitDiffToPathArray( 'git diff --cached --name-only --diff-filter=ACM' ).filter( Boolean );
-const dirtyFiles = parseGitDiffToPathArray( 'git diff --name-only --diff-filter=ACM' ).filter( Boolean );
+const gitFiles = parseGitDiffToPathArray(
+	'git diff --cached --name-only --diff-filter=ACM'
+).filter( Boolean );
+const dirtyFiles = parseGitDiffToPathArray( 'git diff --name-only --diff-filter=ACM' ).filter(
+	Boolean
+);
 const jsFiles = gitFiles.filter( jsFilesToFilter );
 const phpFiles = gitFiles.filter( name => name.endsWith( '.php' ) );
 const phpcsFiles = phpFiles.filter( phpcsFilesToFilter );
@@ -147,10 +144,13 @@ if ( phpcbfResult && phpcbfResult.status ) {
 }
 
 if ( phpcsResult && phpcsResult.status ) {
-	const phpcsStatus = ( 2 === phpcsResult.status ? 'PHPCS reported some problems and could not automatically fix them since there are unstaged changes in the file.\n' : 'PHPCS reported some problems and cannot automatically fix them.\n' );
+	const phpcsStatus =
+		2 === phpcsResult.status
+			? 'PHPCS reported some problems and could not automatically fix them since there are unstaged changes in the file.\n'
+			: 'PHPCS reported some problems and cannot automatically fix them.\n';
 	console.log(
 		chalk.red( 'COMMIT ABORTED:' ),
-			phpcsStatus +
+		phpcsStatus +
 			'If you are aware of them and it is OK, ' +
 			'repeat the commit command with --no-verify to avoid this check.\n' +
 			"But please don't. Code is poetry."

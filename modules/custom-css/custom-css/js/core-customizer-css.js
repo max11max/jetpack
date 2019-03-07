@@ -1,9 +1,9 @@
-(function( wp, $, api ){
-	api.controlConstructor.jetpackCss = api.Control.extend({
+( function( wp, $, api ) {
+	api.controlConstructor.jetpackCss = api.Control.extend( {
 		modes: {
-			'default': 'text/css',
-			'less': 'text/x-less',
-			'sass': 'text/x-scss'
+			default: 'text/css',
+			less: 'text/x-less',
+			sass: 'text/x-scss',
 		},
 		_updating: false,
 		/**
@@ -15,17 +15,20 @@
 			// add our textarea
 			this.$input = $( '<textarea />', {
 				name: this.setting.id,
-				'class': 'for-codemirror hidden'
+				class: 'for-codemirror hidden',
 			} ).val( this.setting() );
 			this.container.append( this.$input );
 
 			// keep the textarea and the setting synced up
-			api( this.setting.id, _.bind( function( setting ){
-				var element = new api.Element( this.$input );
-				this.elements = [ element ];
-				element.sync( setting );
-				element.set( setting() );
-			}, this ) );
+			api(
+				this.setting.id,
+				_.bind( function( setting ) {
+					var element = new api.Element( this.$input );
+					this.elements = [ element ];
+					element.sync( setting );
+					element.set( setting() );
+				}, this )
+			);
 
 			// should we use CodeMirror?
 			if ( this.opts.useRichEditor ) {
@@ -41,12 +44,12 @@
 		 * @return {null}
 		 */
 		initCodeMirror: function() {
-			this.editor = window.CodeMirror.fromTextArea( this.$input.get(0), {
+			this.editor = window.CodeMirror.fromTextArea( this.$input.get( 0 ), {
 				mode: this.getMode(),
 				lineNumbers: true,
 				tabSize: 2,
 				indentWithTabs: true,
-				lineWrapping: true
+				lineWrapping: true,
 			} );
 
 			this.addListeners();
@@ -60,24 +63,29 @@
 
 			// refresh the CodeMirror instance's rendering because it's initially hidden
 			// 250ms because that's the open animation duration
-			$( '#accordion-section-custom_css > .accordion-section-title' ).click( _.bind( _.debounce( this.editor.refresh, 250 ), this.editor ) );
+			$( '#accordion-section-custom_css > .accordion-section-title' ).click(
+				_.bind( _.debounce( this.editor.refresh, 250 ), this.editor )
+			);
 			// also refresh when focusing
 			this.editor.on( 'focus', function( editor ) {
 				editor.refresh();
-			});
+			} );
 
 			// when the CodeMirror instance changes, mirror to the textarea,
 			// where we have our "true" change event handler bound. This allows both to function.
-			this.editor.on( 'change', _.bind( function( editor ) {
-				this._updating = true;
-				this.$input.val( editor.getValue() ).trigger( 'change' );
-				this._updating = false;
+			this.editor.on(
+				'change',
+				_.bind( function( editor ) {
+					this._updating = true;
+					this.$input.val( editor.getValue() ).trigger( 'change' );
+					this._updating = false;
 
-				if ( ! edited ) {
-					window.ga && window.ga( 'send', 'event', 'Customizer', 'Typed Custom CSS' );
-					edited = true;
-				}
-			}, this ) );
+					if ( ! edited ) {
+						window.ga && window.ga( 'send', 'event', 'Customizer', 'Typed Custom CSS' );
+						edited = true;
+					}
+				}, this )
+			);
 
 			this.editor.on( 'focus', function() {
 				window.ga && window.ga( 'send', 'event', 'Customizer', 'Focused CSS Editor' );
@@ -104,7 +112,7 @@
 		 */
 		externalChange: function() {
 			// only if the change wasn't internal
-			if( ! this._updating ) {
+			if ( ! this._updating ) {
 				this.editor.setValue( this.setting() );
 			}
 		},
@@ -115,9 +123,12 @@
 		 */
 		refresh: function( id ) {
 			if ( 'accordion-section-custom_css' === id ) {
-				setTimeout( _.bind( function(){
-					this.editor.refresh();
-				}, this), 300 );
+				setTimeout(
+					_.bind( function() {
+						this.editor.refresh();
+					}, this ),
+					300
+				);
 			}
 		},
 		/**
@@ -134,14 +145,14 @@
 			}
 			$( '<div />', {
 				id: 'css-help-links',
-				'class': 'css-help'
-			}).appendTo( this.container );
+				class: 'css-help',
+			} ).appendTo( this.container );
 			$( '<a />', {
 				id: 'help-link',
 				target: '_blank',
 				href: this.opts.cssHelpUrl,
-				text: this.opts.l10n.css_help_title
-			}).prependTo( '#css-help-links' );
+				text: this.opts.l10n.css_help_title,
+			} ).prependTo( '#css-help-links' );
 
 			// Only show the revisions link if there are revisions
 			if ( this.opts.areThereCssRevisions ) {
@@ -149,8 +160,8 @@
 					id: 'revisions-link',
 					target: '_blank',
 					href: this.opts.revisionsUrl,
-					text: this.opts.l10n.revisions
-				}).prependTo( '#css-help-links' );
+					text: this.opts.l10n.revisions,
+				} ).prependTo( '#css-help-links' );
 			}
 		},
 		/**
@@ -186,7 +197,6 @@
 				return control.container;
 			}
 			return null;
-		}
-	});
-
-})( this.wp, jQuery, this.wp.customize );
+		},
+	} );
+} )( this.wp, jQuery, this.wp.customize );
